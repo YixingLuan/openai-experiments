@@ -7,8 +7,21 @@ from typing import Any, List
 
 import aiohttp
 import openai
-from google.cloud import secretmanager
+import tiktoken
 from retry import retry
+
+
+def setup_tokenizer(model: str = 'gpt-3.5-turbo'):
+    """
+    - Set up OpenAI tokenizer for GPT models
+    Args:
+        model: str, the name of the GPT model
+                    to set up tokenizer for
+    """
+    tokenizer = tiktoken.get_encoding('cl100k_base')
+    tokenizer = tiktoken.encoding_for_model(model)
+
+    return tokenizer
 
 
 def setup_openai(api_key: str, org_id: str = None):
@@ -184,6 +197,61 @@ async def run_gpt_chat_async(chat_prompt: List,
             response, status_code = await response.json(), response.status
             if status_code == 200:
                 response = response['choices'][0]['message']['content']
+                response = response.strip()
+                return response
+            
+            elif status_code in (409, 500, 503): 
+                # retry on these OpenAI server side errors
+                retry_queue.put_nowait(store_in_queue)
+                return None
+
+            elif status_code == 429 and 'quota' not in response['error'].get('message', ''):
+                # retry only on RateLimitError that has different variations of error messages
+                # such as: Rate limit exceeded, server error, model is overloaded, etc.
+                # (429 also includes QuotaExceededError that we don't want to retry)
+                retry_queue.put_nowait(store_in_queue)
+                return None
+
+            else:
+                # For other errors, raise Exception
+                message = f"{response['error'].get('type', '')}: {response['error'].get('message', '')}"
+                raise Exception(message)
+            
+
+async def run_gpt_async(prompt: str, 
+                        retry_queue: asyncio.queues.Queue, 
+                        store_in_queue: Any,
+                        api_key: str,
+                        request_url: str = 'https://api.openai.com/v1/completions',
+                        model: str = 'text-davinci-003', 
+                        **kwargs):
+    """
+    - Asyncronous version of `run_gpt` function
+    - Basically the same operation as `run_gpt_chat_async` function, 
+      just has different way to parse the output accordingly
+    Args:
+        prompt: str, text model prompt for instruct models
+        retry_queue: `asyncio.Queue`, a queue that stores the object to retry
+        store_in_queue: Any, an object that will be stored in queue when need retry
+        api_key: str, OpenAI API key
+        request_url: str, a valid URL for OpenAI chat endpoint
+        model: str, a valid OpenAI chat model
+    """
+    json_body = {
+        'model': model,
+        'prompt': prompt
+    }
+    json_body.update(kwargs)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            url=request_url, 
+            headers={'Authorization': f'Bearer {api_key}'}, 
+            json=json_body
+        ) as response:
+            response, status_code = await response.json(), response.status
+            if status_code == 200:
+                response = response.choices[0]['text']
                 response = response.strip()
                 return response
             
