@@ -7,6 +7,7 @@ from typing import Any, List
 
 import aiohttp
 import openai
+import spacy
 import tiktoken
 from retry import retry
 
@@ -35,6 +36,46 @@ def setup_openai(api_key: str, org_id: str = None):
     openai.api_key = api_key
     if org_id:
         openai.organization = org_id
+
+
+def setup_spacy(language_model: str = 'en_core_web_lg'):
+    """
+    - Load spaCy language model
+    """
+    nlp = spacy.load(language_model)
+    return nlp
+
+
+def chunk_text(text: str, nlp):
+    """
+    Chunk the text into sentences using spaCy
+    """
+    if len(text) == 0:
+        return []
+
+    doc = nlp(text, disable=['tagger', 'ner', 'lemmatizer'])
+    sent_docs = []
+    for sent in doc.sents:
+        sent = ' '.join(sent.text.split())
+        sent_docs.append(nlp(sent))
+    return sent_docs
+
+
+def filter_incomplete(text: str, nlp=None):
+    """
+    - Parse the given text into sentences 
+      and remove the last sentence if it is partial/incomplete
+    """
+    if not nlp:
+        nlp = setup_spacy()
+
+    spacy_sents = chunk_text(text, nlp)
+    # check if the sentence is ending with a closing punctuation
+    if not spacy_sents:
+        return None
+    if not spacy_sents[-1][-1] in ['.', '!', '?']: 
+        spacy_sents = spacy_sents[:-1]
+    return ' '.join([s_sent.text for s_sent in spacy_sents])
 
 
 def openai_error_handler(error):
