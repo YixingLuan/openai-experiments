@@ -21,7 +21,7 @@ def summarize(text: str, model: str = 'gpt-3.5-turbo', **kwargs):
     accepted_length = 4097 - max_tokens - 1 # -1 is for '\n' in the end (for instruct models)
     tokenizer = setup_tokenizer(model)
 
-    prompt = f'Please summarize the following text:\n{text}'
+    prompt = f'Please summarize the following text in English:\n{text}'
 
     if model in ['gpt-3.5-turbo', 'gpt-4']: # chat completion
         system_prompt = 'You are a precise and descriptive text summarizer.'
@@ -35,7 +35,7 @@ def summarize(text: str, model: str = 'gpt-3.5-turbo', **kwargs):
         response = run_gpt_chat(prompts, model, **kwargs)
  
     else: # text completion
-        accepted_length -= len(tokenizer.encode('\n\nSummary: '))
+        accepted_length -= len(tokenizer.encode('\n\nSummary in English: '))
         # Limit input length so that we don't go over model limit
         prompt = limit_prompt(prompt, accepted_length, tokenizer)
         prompt += '\n\nSummary: '
