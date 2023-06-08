@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import os
 from typing import Any, List
 
 import aiohttp
@@ -73,7 +72,7 @@ def filter_incomplete(text: str, nlp=None):
     # check if the sentence is ending with a closing punctuation
     if not spacy_sents:
         return None
-    if not spacy_sents[-1][-1] in ['.', '!', '?']: 
+    if not spacy_sents[-1].text[-1] in ['.', '!', '?']: 
         spacy_sents = spacy_sents[:-1]
     return ' '.join([s_sent.text for s_sent in spacy_sents])
 

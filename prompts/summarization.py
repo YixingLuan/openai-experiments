@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from typing import List
-from utils import setup_tokenizer, filter_incomplete run_gpt_chat, run_gpt
+
+from utils import filter_incomplete, run_gpt, run_gpt_chat, setup_tokenizer
 
 
 def summarize(text: str, model: str = 'gpt-3.5-turbo', **kwargs):

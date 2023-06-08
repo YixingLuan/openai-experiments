@@ -1,9 +1,13 @@
-from utils import openai_error_handler
-from prompts.summarization import summarize
-from smart_open import open as sopen
+#!usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
 import json
 from typing import List
-import argparse
+
+from prompts.summarization import summarize
+from smart_open import open as sopen
+from utils import setup_openai
 
 
 def parse_json(input_file: str):
@@ -14,7 +18,7 @@ def parse_json(input_file: str):
     return texts
 
 
-def write_json(output_file: str, input_texts: List[str], outout_texts: List[str]):
+def write_json(output_file: str, input_texts: List[str], output_texts: List[str]):
     with sopen(output_file, 'w') as f:
         for in_text, out_text in zip(input_texts, output_texts):
             d = {
@@ -25,7 +29,7 @@ def write_json(output_file: str, input_texts: List[str], outout_texts: List[str]
             f.write('\n')
         
 
-def main(**kwargs)
+def main(**kwargs):
     openai_key = kwargs.pop('api_key')
     setup_openai(openai_key)
 
@@ -61,7 +65,7 @@ if __name__ == '__main__':
                         help='A task to perform')
     parser.add_argument('--model',
                         dest='model',
-                        default='gpt-3.5-turbo'
+                        default='gpt-3.5-turbo',
                         help='OpenAI GPT model to use')
     parser.add_argument('--input_file',
                         dest='input_file',
@@ -83,5 +87,5 @@ if __name__ == '__main__':
                         help='Max number of tokens to generate')
     args = parser.parse_args()
 
-    main(**args)
+    main(**vars(args))
 
