@@ -230,7 +230,7 @@ async def run_gpt_async(prompt: str,
         ) as response:
             response, status_code = await response.json(), response.status
             if status_code == 200:
-                response = response.choices[0]['text']
+                response = response['choices'][0]['text']
                 response = response.strip()
                 return response
             

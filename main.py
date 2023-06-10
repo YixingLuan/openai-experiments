@@ -4,8 +4,9 @@
 import argparse
 import json
 from typing import List
+import asyncio
 
-from prompts.summarization import summarize
+from prompts.summarization import summarize, batch_summarize
 from smart_open import open as sopen
 from utils import setup_openai
 
@@ -15,6 +16,7 @@ def parse_json(input_file: str):
     with sopen(input_file, 'r') as f:
         lines = f.readlines()
     texts = [json.loads(l.strip()) for l in lines]
+    texts = [t['text'] for t in texts]
     return texts
 
 
@@ -31,7 +33,6 @@ def write_json(output_file: str, input_texts: List[str], output_texts: List[str]
 
 def main(**kwargs):
     openai_key = kwargs.pop('api_key')
-    setup_openai(openai_key)
 
     task = kwargs.pop('task')
     model = kwargs.pop('model')
@@ -43,8 +44,10 @@ def main(**kwargs):
         texts = parse_json(input_file)
         if len(texts) > 1:
             # TODO: add batch processing in async
-            pass
+            resps = asyncio.run(batch_summarize(texts, openai_key, model, **kwargs))
+            write_json(output_file, texts, resps)
         else:
+            setup_openai(openai_key)
             resp = summarize(texts[0], model, **kwargs)
             write_json(output_file, texts, [resp])
 
